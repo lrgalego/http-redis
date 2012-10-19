@@ -7,14 +7,19 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 #include <hiredis/hiredis.h>
+#include <string.h>
 
+#include "query_string.h"
+#include "nginx_util.h"
 
 static char *ngx_restfull_redis(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 static void *ngx_restfull_redis_create_loc_conf(ngx_conf_t *cf);
 
-static ngx_command_t  ngx_restfull_redis_commands[] = {
+static int key_not_found(redisReply *reply);
 
-  { ngx_string("restfull_redis"),
+static ngx_command_t  ngx_restfull_redis_commands[] = {
+{ 
+    ngx_string("restfull_redis"),
     NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS,
     ngx_restfull_redis,
     0,
@@ -76,31 +81,12 @@ ngx_restfull_redis_create_loc_conf(ngx_conf_t *cf)
     return conf;
 }
 
-static char* get_key(ngx_http_request_t *r)
-{
-  char *key = malloc(r->args.len*sizeof(char));
-  memcpy(key,r->args.data, r->args.len);
-  return key;
-}
-
-static void define_content_type(ngx_http_request_t *r, char* content_type)
-{
-  r->headers_out.content_type.len = sizeof(content_type) - 1;
-  r->headers_out.content_type.data = (u_char *) content_type;
-}
-
 static ngx_int_t ngx_restfull_redis_handler(ngx_http_request_t *r)
 {
-  ngx_buf_t    *b;
-  ngx_chain_t   out;
-
-  define_content_type(r, "apllication/json");
-
-  b = ngx_pcalloc(r->pool, sizeof(ngx_buf_t));
-
+  
   //TODO: deal with allocation problem - return 500
-
-  out.buf = b;
+  ngx_chain_t   out;
+  out.buf = create_response_buffer(r);;
   out.next = NULL;
 
 
@@ -111,25 +97,30 @@ static ngx_int_t ngx_restfull_redis_handler(ngx_http_request_t *r)
 
   if (c->err) {
     dd("Error: %s\n", c->errstr);
-    // handle error
+    write_to_buffer(out.buf, (u_char*) "Can't connect to redis", strlen("Can't connect to redis"));
   }
 
-  char *key = get_key(r);
-
-  redisReply *reply = redisCommand(c,"GET %s", key);
+  redisReply *reply = redisCommand(c,"GET %s", get(get_params(r), "key"));
   
-  u_char* result =  (u_char*) reply->str;
+  dd("Redis reply status: %d", reply->type);
 
-  b->pos = result;
-  b->last = result + reply->len;
-  b->memory = 1;
-  b->last_buf = 1;
+  if(key_not_found(reply)){
+    not_found(r, out.buf, (u_char*)"not found");
+    return ngx_http_output_filter(r, &out);
+  }
 
-  r->headers_out.status = NGX_HTTP_OK;
-  r->headers_out.content_length_n = reply->len;
-  ngx_http_send_header(r);
+  define_content_type(r, "application/json; charset=utf-8");
 
+  write_to_buffer(out.buf, (u_char*) reply->str, reply->len);
+
+  write_header(r, NGX_HTTP_OK, reply->len);
+  
   return ngx_http_output_filter(r, &out);
+}
+
+static int key_not_found(redisReply *reply)
+{
+  return reply->type == REDIS_REPLY_NIL;
 }
 
 
