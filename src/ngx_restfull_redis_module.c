@@ -104,20 +104,21 @@ static ngx_int_t ngx_restfull_redis_handler(ngx_http_request_t *r)
     redisReply *reply = redisCommand(c,"GET %s", get(params, "key"));
 
     dd("Redis reply status: %d", reply->type);
-    if(key_not_found(reply)){
+    if(key_not_found(reply))
+    {
       not_found(r, out.buf, (u_char*)"not found");
       return ngx_http_output_filter(r, &out);
     }
 
     write_to_buffer(out.buf, (u_char*) reply->str, reply->len);
     write_header(r, NGX_HTTP_OK, reply->len);
-    //freeReplyObject(reply);
 
   } else if (!strcmp(redis_command, "set")){
     redisReply *reply = redisCommand(c,"SET %s %s", get(params, "key"), get(params, "value"));
 
     dd("Redis reply status: %d", reply->type);
-    if(key_not_found(reply)){
+    if(key_not_found(reply))
+    {
       not_found(r, out.buf, (u_char*)"not found");
       return ngx_http_output_filter(r, &out);
     }
@@ -125,7 +126,6 @@ static ngx_int_t ngx_restfull_redis_handler(ngx_http_request_t *r)
     dd("Reply set %s -- %d", reply->str, reply->len);
     write_to_buffer(out.buf, (u_char*) reply->str, reply->len);
     write_header(r, NGX_HTTP_OK, reply->len);
-    //freeReplyObject(reply);
   }
 
   redisFree(c);
