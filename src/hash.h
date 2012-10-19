@@ -21,3 +21,18 @@ static char* get(Hash hash, char* key)
     }
     return NULL;
 }
+
+static void freeHash(Hash hash)
+{
+/*
+  Wew, I have to study how to free things into nginx
+
+  int i;
+  for(i=0; i<hash.size; i++)
+  {
+    ngx_free(hash.entries[i].key);
+    ngx_free(hash.entries[i].value);
+  }
+  ngx_free(hash.entries);
+*/
+}

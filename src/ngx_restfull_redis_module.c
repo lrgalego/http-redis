@@ -129,6 +129,7 @@ static ngx_int_t ngx_restfull_redis_handler(ngx_http_request_t *r)
   }
 
   redisFree(c);
+  freeHash(params);
     
   return ngx_http_output_filter(r, &out);
 }
