@@ -76,14 +76,25 @@ ngx_restfull_redis_create_loc_conf(ngx_conf_t *cf)
     return conf;
 }
 
+static char* get_key(ngx_http_request_t *r)
+{
+  char *key = malloc(r->args.len*sizeof(char));
+  memcpy(key,r->args.data, r->args.len);
+  return key;
+}
+
+static void define_content_type(ngx_http_request_t *r, char* content_type)
+{
+  r->headers_out.content_type.len = sizeof(content_type) - 1;
+  r->headers_out.content_type.data = (u_char *) content_type;
+}
 
 static ngx_int_t ngx_restfull_redis_handler(ngx_http_request_t *r)
 {
   ngx_buf_t    *b;
   ngx_chain_t   out;
 
-  r->headers_out.content_type.len = sizeof("text/html") - 1;
-  r->headers_out.content_type.data = (u_char *) "text/html";
+  define_content_type(r, "apllication/json");
 
   b = ngx_pcalloc(r->pool, sizeof(ngx_buf_t));
 
@@ -93,29 +104,29 @@ static ngx_int_t ngx_restfull_redis_handler(ngx_http_request_t *r)
   out.next = NULL;
 
 
-  ngx_restfull_redis_loc_conf *cfg;
-  cfg = ngx_http_conf_get_module_loc_conf(r, ngx_restfull_redis_module);
-
-  //redisReply *reply;
+  //ngx_restfull_redis_loc_conf *cfg;
+  //cfg = ngx_http_conf_get_module_loc_conf(r, ngx_restfull_redis_module);
 
   redisContext *c = redisConnect("127.0.0.1", 6379);
 
   if (c->err) {
-    printf("Error: %s\n", c->errstr);
+    dd("Error: %s\n", c->errstr);
     // handle error
   }
 
-  redisReply *reply = redisCommand(c, "GET foo");
+  char *key = get_key(r);
+
+  redisReply *reply = redisCommand(c,"GET %s", key);
   
   u_char* result =  (u_char*) reply->str;
 
   b->pos = result;
-  b->last = result + sizeof(result) -1;
+  b->last = result + reply->len;
   b->memory = 1;
   b->last_buf = 1;
 
   r->headers_out.status = NGX_HTTP_OK;
-  r->headers_out.content_length_n = sizeof(result)-1;
+  r->headers_out.content_length_n = reply->len;
   ngx_http_send_header(r);
 
   return ngx_http_output_filter(r, &out);
