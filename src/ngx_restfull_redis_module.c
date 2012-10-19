@@ -34,9 +34,6 @@ typedef struct{
   ngx_uint_t port;
 } ngx_restfull_redis_loc_conf;
 
-
-//static u_char  buffer[] = "glu glu";
-
 static ngx_http_module_t  ngx_restfull_redis_module_ctx = {
   NULL,                          /* preconfiguration */
   NULL,                          /* postconfiguration */
@@ -89,9 +86,10 @@ static ngx_int_t ngx_restfull_redis_handler(ngx_http_request_t *r)
   out.buf = create_response_buffer(r);;
   out.next = NULL;
 
+  dd("command => %s", command(r));
 
-  //ngx_restfull_redis_loc_conf *cfg;
-  //cfg = ngx_http_conf_get_module_loc_conf(r, ngx_restfull_redis_module);
+  char* redis_command = command(r);
+  define_content_type(r, "application/json; charset=utf-8");
 
   redisContext *c = redisConnect("127.0.0.1", 6379);
 
@@ -100,21 +98,38 @@ static ngx_int_t ngx_restfull_redis_handler(ngx_http_request_t *r)
     write_to_buffer(out.buf, (u_char*) "Can't connect to redis", strlen("Can't connect to redis"));
   }
 
-  redisReply *reply = redisCommand(c,"GET %s", get(get_params(r), "key"));
-  
-  dd("Redis reply status: %d", reply->type);
+  Hash params = get_params(r);
 
-  if(key_not_found(reply)){
-    not_found(r, out.buf, (u_char*)"not found");
-    return ngx_http_output_filter(r, &out);
+  if(!strcmp(redis_command, "get")){
+    redisReply *reply = redisCommand(c,"GET %s", get(params, "key"));
+
+    dd("Redis reply status: %d", reply->type);
+    if(key_not_found(reply)){
+      not_found(r, out.buf, (u_char*)"not found");
+      return ngx_http_output_filter(r, &out);
+    }
+
+    write_to_buffer(out.buf, (u_char*) reply->str, reply->len);
+    write_header(r, NGX_HTTP_OK, reply->len);
+    //freeReplyObject(reply);
+
+  } else if (!strcmp(redis_command, "set")){
+    redisReply *reply = redisCommand(c,"SET %s %s", get(params, "key"), get(params, "value"));
+
+    dd("Redis reply status: %d", reply->type);
+    if(key_not_found(reply)){
+      not_found(r, out.buf, (u_char*)"not found");
+      return ngx_http_output_filter(r, &out);
+    }
+
+    dd("Reply set %s -- %d", reply->str, reply->len);
+    write_to_buffer(out.buf, (u_char*) reply->str, reply->len);
+    write_header(r, NGX_HTTP_OK, reply->len);
+    //freeReplyObject(reply);
   }
 
-  define_content_type(r, "application/json; charset=utf-8");
-
-  write_to_buffer(out.buf, (u_char*) reply->str, reply->len);
-
-  write_header(r, NGX_HTTP_OK, reply->len);
-  
+  redisFree(c);
+    
   return ngx_http_output_filter(r, &out);
 }
 

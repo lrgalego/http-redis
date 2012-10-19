@@ -61,3 +61,14 @@ static Hash get_params(ngx_http_request_t *r)
   memcpy(key,r->args.data, r->args.len);
   return parse_query_string(key, r->args.len);
 }
+
+static char* command(ngx_http_request_t *r)
+{
+    char* path = (char *) r->uri.data;
+    char* pos = strchr(path, '?');
+    int size = pos - path;
+    char* command = malloc(size * sizeof(char));
+    strncpy(command, path+1, size-1);
+    command[size] = '\0';
+    return command;
+}
