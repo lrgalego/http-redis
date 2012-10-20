@@ -32,3 +32,10 @@ static void define_content_type(ngx_http_request_t *r, char* content_type)
     r->headers_out.content_type.len = strlen(content_type);
     r->headers_out.content_type.data = (u_char *) content_type;
 }
+
+static u_char* copy(ngx_pool_t *pool, char * from, int len)
+{
+  u_char* result = ngx_pcalloc(pool, sizeof(char)*len);
+  sprintf((char*)result, "%s", from);
+  return result;
+}
