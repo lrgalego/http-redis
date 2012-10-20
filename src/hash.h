@@ -8,10 +8,21 @@ typedef struct
 {
   Entry* entries;
   int size;
+  char* (*get)( const void *, char* );
 } Hash;
 
-static char* get(Hash* hash, char* key)
+static char* get( const void* self, char* key);
+
+Hash* new_hash( void* (*allocator)(size_t))
 {
+  Hash *h = (Hash*) allocator(sizeof(Hash));
+  h->get = &get;
+  return h;
+}
+
+static char* get( const void* self, char* key)
+{
+    Hash* hash = (Hash*)self;
     int i;
     for(i=0; i<hash->size; i++)
     {
@@ -20,19 +31,4 @@ static char* get(Hash* hash, char* key)
         }
     }
     return NULL;
-}
-
-static void freeHash(Hash hash)
-{
-/*
-  Wew, I have to study how to free things into nginx
-
-  int i;
-  for(i=0; i<hash.size; i++)
-  {
-    ngx_free(hash.entries[i].key);
-    ngx_free(hash.entries[i].value);
-  }
-  ngx_free(hash.entries);
-*/
 }
