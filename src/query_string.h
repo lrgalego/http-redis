@@ -22,10 +22,10 @@ static Entry new_entry(char* arg)
     return e;
 }
 
-static Hash* parse_query_string(char* args, int len)
+static Hash* parse_query_string(void* (*allocator)(size_t), char* args, int len)
 {
     int args_count = count_params(args,len);
-    Entry* entries = (Entry *) malloc(args_count*sizeof(Entry));
+    Entry* entries = (Entry *) allocator(args_count*sizeof(Entry));
     
     int i;
     int index = 0;
@@ -41,7 +41,7 @@ static Hash* parse_query_string(char* args, int len)
             index = pos - args;
         }
         dd( "index: %d", index );
-        char * arg = malloc((index + 1) * sizeof(char) );
+        char * arg = allocator((index + 1) * sizeof(char) );
         strncpy(arg, args, index );
         arg[index] = '\0'; 
 
@@ -49,7 +49,7 @@ static Hash* parse_query_string(char* args, int len)
         args += index + 1;
         len -= index + 1;
     }
-    Hash *hash = (Hash*)malloc(sizeof(Hash));
+    Hash *hash = new_hash(allocator);
     hash->entries = entries;
     hash->size = args_count;
     return hash;
@@ -59,7 +59,7 @@ static Hash* get_params(ngx_http_request_t *r)
 {
   char *key = malloc(r->args.len*sizeof(char));
   memcpy(key,r->args.data, r->args.len);
-  return parse_query_string(key, r->args.len);
+  return parse_query_string(&malloc, key, r->args.len);
 }
 
 static char* command(ngx_http_request_t *r)
