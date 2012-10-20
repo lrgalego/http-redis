@@ -1,4 +1,4 @@
-nginx_src='/Users/lucas/fedex-day/nginx-1.3.7'
+nginx_src='/opt/nginx-src'
 nginx='/opt/nginx'
 
 
