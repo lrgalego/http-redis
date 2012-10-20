@@ -8,9 +8,11 @@
 #include <ngx_http.h>
 #include <hiredis/hiredis.h>
 #include <string.h>
+#include <math.h>
 
 #include "query_string.h"
 #include "nginx_util.h"
+
 
 static char *ngx_restfull_redis(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 static void *ngx_restfull_redis_create_loc_conf(ngx_conf_t *cf);
@@ -78,6 +80,11 @@ ngx_restfull_redis_create_loc_conf(ngx_conf_t *cf)
     return conf;
 }
 
+static int number_of_digits(double n)
+{
+  return log10(n) + 1;
+}
+
 static ngx_int_t ngx_restfull_redis_handler(ngx_http_request_t *r)
 {
   
@@ -132,6 +139,19 @@ static ngx_int_t ngx_restfull_redis_handler(ngx_http_request_t *r)
     dd("Reply set %s -- %d", reply->str, reply->len);
     write_to_buffer(out.buf, (u_char*) reply->str, reply->len);
     write_header(r, NGX_HTTP_OK, reply->len);
+  } else if(!strcmp(redis_command, "incr"))
+  {
+    reply = redisCommand(c,"INCR %s", get(params, "key"));
+
+    dd("Redis reply status: %d", reply->type);
+
+    int len = number_of_digits(reply->integer);
+
+    dd("Reply INCR -- %d - len %d", (int)reply->integer, len);
+    u_char* result = ngx_pcalloc(r->pool, sizeof(char)*len);
+    sprintf((char*)result,"%d",(int)reply->integer);
+    write_to_buffer(out.buf, result, len);
+    write_header(r, NGX_HTTP_OK, len);
   }
 
   freeReplyObject(reply);
