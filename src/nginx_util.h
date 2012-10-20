@@ -8,8 +8,6 @@ static void write_header(ngx_http_request_t *r, int status, int len)
 
 static void write_to_buffer(ngx_buf_t* buffer, u_char* msg, int len)
 {
- // u_char* msg_copy = (u_char*) malloc(len * sizeof(u_char));
-  //memcpy(msg_copy, msg, len);
   buffer->pos = msg;
   buffer->last = msg + len;
   buffer->memory = 1;
