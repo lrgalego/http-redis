@@ -106,12 +106,12 @@ static ngx_int_t ngx_restfull_redis_handler(ngx_http_request_t *r)
   }
 
   Hash* params = get_params(r);
-
+  
   redisReply *reply;
 
   if(!strcmp(redis_command, "get"))
   {
-    reply = redisCommand(c,"GET %s", get(params, "key"));
+    reply = redisCommand(c,"GET %s", params->get(params, "key"));
 
     dd("Redis reply status: %d", reply->type);
     if(key_not_found(reply))
@@ -127,7 +127,7 @@ static ngx_int_t ngx_restfull_redis_handler(ngx_http_request_t *r)
 
   } else if (!strcmp(redis_command, "set"))
   {
-    reply = redisCommand(c,"SET %s %s", get(params, "key"), get(params, "value"));
+    reply = redisCommand(c,"SET %s %s", params->get(params, "key"), params->get(params, "value"));
 
     dd("Redis reply status: %d", reply->type);
     if(key_not_found(reply))
@@ -141,7 +141,7 @@ static ngx_int_t ngx_restfull_redis_handler(ngx_http_request_t *r)
     write_header(r, NGX_HTTP_OK, reply->len);
   } else if(!strcmp(redis_command, "incr"))
   {
-    reply = redisCommand(c,"INCR %s", get(params, "key"));
+    reply = redisCommand(c,"INCR %s", params->get(params, "key"));
 
     dd("Redis reply status: %d", reply->type);
 
@@ -155,9 +155,8 @@ static ngx_int_t ngx_restfull_redis_handler(ngx_http_request_t *r)
   }
 
   freeReplyObject(reply);
-  ngx_free(params);
   redisFree(c);
-  freeHash(params);
+  ngx_free(params);
     
   return ngx_http_output_filter(r, &out);
 }
