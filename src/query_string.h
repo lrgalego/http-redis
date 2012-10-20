@@ -22,7 +22,7 @@ static Entry new_entry(char* arg)
     return e;
 }
 
-static Hash parse_query_string(char* args, int len)
+static Hash* parse_query_string(char* args, int len)
 {
     int args_count = count_params(args,len);
     Entry* entries = (Entry *) malloc(args_count*sizeof(Entry));
@@ -49,13 +49,13 @@ static Hash parse_query_string(char* args, int len)
         args += index + 1;
         len -= index + 1;
     }
-    Hash hash;
-    hash.entries = entries;
-    hash.size = args_count;
+    Hash *hash = (Hash*)malloc(sizeof(Hash));
+    hash->entries = entries;
+    hash->size = args_count;
     return hash;
 }
 
-static Hash get_params(ngx_http_request_t *r)
+static Hash* get_params(ngx_http_request_t *r)
 {
   char *key = malloc(r->args.len*sizeof(char));
   memcpy(key,r->args.data, r->args.len);
