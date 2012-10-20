@@ -10,13 +10,13 @@ typedef struct
   int size;
 } Hash;
 
-static char* get(Hash hash, char* key)
+static char* get(Hash* hash, char* key)
 {
     int i;
-    for(i=0; i<hash.size; i++)
+    for(i=0; i<hash->size; i++)
     {
-        if(!strcmp(key, hash.entries[i].key)){
-            return hash.entries[i].value;
+        if(!strcmp(key, hash->entries[i].key)){
+            return hash->entries[i].value;
         }
     }
     return NULL;
